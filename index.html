@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>烧烤总汇下单系统</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;background:#f5f5f5;color:#333;max-width:420px;margin:0 auto;min-height:100vh;user-select:none;-webkit-user-select:none}
+
+/* ===== 顶部导航 ===== */
+.top-bar{position:sticky;top:0;z-index:99;background:linear-gradient(135deg,#ff6b35,#e85d3a);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.top-bar .title{font-size:18px;font-weight:700}
+.top-bar .role-badge{font-size:12px;background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:12px}
+.top-bar .admin-btn{font-size:12px;color:#fff;text-decoration:underline;cursor:pointer}
+
+/* ===== 搜索栏 ===== */
+.search-bar{padding:10px 12px;background:#fff;position:sticky;top:48px;z-index:98;border-bottom:1px solid #eee}
+.search-bar input{width:100%;padding:10px 14px;border:none;border-radius:20px;background:#f5f5f5;font-size:14px;outline:none}
+
+/* ===== 分类+商品容器 ===== */
+.main-content{display:flex;height:calc(100vh - 190px);overflow:hidden}
+.cat-sidebar{width:90px;background:#f8f8f8;overflow-y:auto;flex-shrink:0}
+.cat-sidebar .cat-item{padding:14px 8px;font-size:13px;text-align:center;color:#666;border-left:3px solid transparent;cursor:pointer;transition:.2s;-webkit-tap-highlight-color:transparent}
+.cat-sidebar .cat-item.active{background:#fff;color:#e85d3a;border-left-color:#e85d3a;font-weight:600}
+.goods-area{flex:1;overflow-y:auto;padding:8px}
+
+/* ===== 商品卡片 ===== */
+.goods-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.goods-img{width:60px;height:60px;border-radius:8px;background:#f0f0f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;margin-right:10px;overflow:hidden}
+.goods-img img{width:100%;height:100%;object-fit:cover}
+.goods-info{flex:1;min-width:0}
+.goods-name{font-size:15px;font-weight:500;margin-bottom:2px}
+.goods-desc{font-size:11px;color:#999}
+.goods-action{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn-minus,.btn-plus{width:28px;height:28px;border-radius:50%;border:2px solid #e85d3a;background:#fff;color:#e85d3a;font-size:16px;line-height:24px;text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;font-weight:700}
+.btn-minus.hidden{visibility:hidden}
+.goods-qty{font-size:14px;font-weight:600;min-width:20px;text-align:center}
+
+/* ===== 底部购物车栏 ===== */
+.cart-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:#fff;border-top:2px solid #f0f0f0;padding:10px 16px;display:flex;align-items:center;z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,0.06)}
+.cart-icon-wrap{position:relative;width:50px;height:50px;margin-right:12px;flex-shrink:0}
+.cart-icon{width:50px;height:50px;border-radius:50%;background:#e85d3a;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;position:relative}
+.cart-icon.empty{background:#ccc}
+.cart-badge{position:absolute;top:-4px;right:-4px;background:#ff4d4f;color:#fff;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:600;padding:0 4px}
+.cart-info{flex:1}
+.cart-total{font-size:17px;font-weight:700;color:#e85d3a}
+.cart-empty{font-size:13px;color:#999}
+.cart-submit{background:#e85d3a;color:#fff;border:none;padding:12px 24px;border-radius:24px;font-size:15px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap}
+.cart-submit:disabled{background:#ccc}
+
+/* ===== 提交订单弹窗 ===== */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;padding:20px 16px 30px;-webkit-overflow-scrolling:touch}
+.modal-title{font-size:18px;font-weight:600;text-align:center;margin-bottom:16px}
+.modal-close{position:absolute;right:16px;top:16px;font-size:22px;color:#999;cursor:pointer}
+
+/* ===== 商家后台 ===== */
+.admin-page{display:none;padding-bottom:80px}
+.admin-page.active{display:block}
+
+.order-card{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.order-customer{font-size:16px;font-weight:600}
+.order-status{font-size:12px;padding:2px 10px;border-radius:10px;font-weight:500}
+.order-status.pending{background:#fff3cd;color:#856404}
+.order-status.confirmed{background:#d4edda;color:#155724}
+.order-status.done{background:#d6d8db;color:#383d41}
+.order-items{font-size:13px;color:#666;margin-bottom:8px;line-height:1.8}
+.order-time{font-size:11px;color:#999}
+.order-actions{display:flex;gap:8px;margin-top:10px}
+.order-actions button{flex:1;padding:8px;border-radius:8px;border:none;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-weight:500}
+.btn-confirm{background:#e85d3a;color:#fff}
+.btn-print{background:#2196f3;color:#fff}
+.btn-done{background:#07c160;color:#fff}
+.btn-delete{background:#ff4d4f;color:#fff}
+
+/* ===== 商品管理 ===== */
+.goods-mgmt-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.goods-mgmt-info{flex:1}
+.goods-mgmt-name{font-size:14px;font-weight:500}
+.goods-mgmt-price{font-size:12px;color:#999;margin-top:2px}
+.goods-mgmt-actions{display:flex;gap:6px}
+
+/* ===== 通用按钮 ===== */
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-primary{background:#e85d3a;color:#fff}
+.btn-outline{background:#fff;color:#e85d3a;border:1px solid #e85d3a}
+.btn-block{display:block;width:100%}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:13px;color:#666;margin-bottom:4px}
+.form-row input,.form-row select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#fff;-webkit-appearance:none}
+.form-row input:focus,.form-row select:focus{border-color:#e85d3a}
+
+/* ===== Toast ===== */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.75);color:#fff;padding:10px 22px;border-radius:8px;font-size:14px;z-index:999;display:none;white-space:nowrap}
+.toast.show{display:block;animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-50%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+/* ===== 客户管理页 ===== */
+.customer-card{background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.customer-info{flex:1}
+.customer-name{font-size:14px;font-weight:500}
+.customer-meta{font-size:12px;color:#999;margin-top:2px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#fff0ed;color:#e85d3a}
+
+/* ===== 对账单 ===== */
+.tally-card{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.tally-header{display:flex;justify-content:space-between;align-items:center}
+.tally-customer{font-size:16px;font-weight:600}
+.tally-total{font-size:16px;font-weight:bold;color:#e85d3a}
+.tally-summary{font-size:13px;color:#666;margin:6px 0}
+.tally-detail{margin-top:8px;font-size:12px;color:#666;border-top:1px solid #f0f0f0;padding-top:8px;display:none}
+.tally-detail.open{display:block}
+
+/* ===== 打印相关 ===== */
+.print-btn{background:#2196f3;color:#fff}
+.print-btn:disabled{background:#ccc}
+.bluetooth-tip{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin-top:10px;font-size:12px;color:#856404;display:none}
+.bluetooth-tip.show{display:block}
+
+/* ===== 空状态 ===== */
+.empty{text-align:center;padding:40px 20px;color:#ccc;font-size:14px}
+
+/* ===== 类别颜色 ===== */
+.cat-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;margin-left:4px;background:#fff0ed;color:#e85d3a}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ====== 顶部栏 ====== -->
+<div class="top-bar" id="topBar">
+  <div class="title">🍖 烧烤总汇</div>
+  <div>
+    <span class="role-badge" id="roleBadge" onclick="switchRole()">📱 我是客户</span>
+    <span class="admin-btn" id="adminLink" onclick="switchRole()" style="margin-left:8px;display:none;">🔧 商家后台</span>
+  </div>
+</div>
+
+<!-- ====== 客户端：下单页面 ====== -->
+<div id="clientPage">
+  <!-- 搜索 -->
+  <div class="search-bar">
+    <input type="text" id="goodsSearchInput" placeholder="🔍 搜索商品..." oninput="filterGoods()">
+  </div>
+
+  <!-- 分类+商品 -->
+  <div class="main-content" id="mainContent">
+    <div class="cat-sidebar" id="catSidebar"></div>
+    <div class="goods-area" id="goodsArea"></div>
+  </div>
+
+  <!-- 购物车栏 -->
+  <div class="cart-bar" id="cartBar">
+    <div class="cart-icon-wrap" onclick="toggleCartDetail()">
+      <div class="cart-icon empty" id="cartIcon">
+        🛒
+        <div class="cart-badge" id="cartBadge" style="display:none">0</div>
+      </div>
+    </div>
+    <div class="cart-info">
+      <div class="cart-empty" id="cartEmpty">未选购商品</div>
+      <div class="cart-total" id="cartTotal" style="display:none"></div>
+    </div>
+    <button class="cart-submit" id="cartSubmit" disabled onclick="showSubmitModal()">去提交</button>
+  </div>
+</div>
+
+<!-- ====== 商家端：订单管理页面 ====== -->
+<div class="admin-page" id="adminPage">
+  <div style="display:flex;gap:6px;padding:10px 12px;flex-wrap:wrap;">
+    <button class="btn btn-primary" id="tabOrders" onclick="switchAdminTab('orders',this)" style="flex:1;">📋 订单</button>
+    <button class="btn btn-outline" id="tabTally" onclick="switchAdminTab('tally',this)" style="flex:1;">📒 对账</button>
+    <button class="btn btn-outline" id="tabGoodsMgmt" onclick="switchAdminTab('goods',this)" style="flex:1;">📦 货品</button>
+    <button class="btn btn-outline" id="tabCustomersMgmt" onclick="switchAdminTab('customers',this)" style="flex:1;">👥 客户</button>
+  </div>
+
+  <div style="padding:0 12px;">
+    <!-- 订单列表 -->
+    <div id="adminOrders" style="display:block;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <select id="orderFilter" onchange="renderAdminOrders()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+          <option value="all">全部订单</option>
+          <option value="pending">待确认</option>
+          <option value="confirmed">已确认</option>
+          <option value="done">已完成</option>
+        </select>
+        <button class="btn btn-sm btn-outline" onclick="renderAdminOrders()">刷新</button>
+      </div>
+      <div id="adminOrderList"></div>
+    </div>
+
+    <!-- 对账 -->
+    <div id="adminTally" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <select id="tallyFilter" onchange="renderAdminTally()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+          <option value="unpaid">未结清</option>
+          <option value="all">全部</option>
+          <option value="today">今日</option>
+        </select>
+        <button class="btn btn-sm btn-outline" onclick="renderAdminTally()">刷新</button>
+      </div>
+      <div id="adminTallyList"></div>
+    </div>
+
+    <!-- 货品管理 -->
+    <div id="adminGoods" style="display:none;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-sm btn-primary" onclick="showGoodsModal()">+ 新增货品</button>
+        <input type="text" id="adminGoodsSearch" placeholder="搜索货品..." oninput="renderAdminGoods()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+      </div>
+      <div id="adminGoodsList"></div>
+    </div>
+
+    <!-- 客户管理 -->
+    <div id="adminCustomers" style="display:none;">
+      <div style="margin-bottom:10px;">
+        <button class="btn btn-sm btn-primary" onclick="showCustomerModal()">+ 新增客户</button>
+      </div>
+      <div id="adminCustomerList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 提交订单弹窗 ====== -->
+<div class="modal-overlay" id="submitModal">
+  <div class="modal">
+    <div class="modal-title">📋 确认订单信息</div>
+    <div style="font-size:13px;color:#999;text-align:center;margin-bottom:12px;">选好后提交，商家会确认金额并联系您</div>
+
+    <div class="form-row">
+      <label>您的称呼 *</label>
+      <input type="text" id="submitName" placeholder="如：张老板">
+    </div>
+    <div class="form-row">
+      <label>联系电话</label>
+      <input type="tel" id="submitPhone" placeholder="选填">
+    </div>
+    <div class="form-row">
+      <label>备注</label>
+      <input type="text" id="submitRemark" placeholder="如：老规矩、加急">
+    </div>
+
+    <div style="background:#f8f8f8;border-radius:8px;padding:12px;margin-bottom:12px;max-height:180px;overflow-y:auto;" id="submitItemList"></div>
+
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="hideModal('submitModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;font-size:15px;font-weight:600;" onclick="submitOrder()">✅ 提交订单</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 订单详情弹窗（商家） ====== -->
+<div class="modal-overlay" id="orderDetailModal">
+  <div class="modal">
+    <div class="modal-title" id="orderDetailTitle">订单详情</div>
+    <div id="orderDetailContent"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;" id="orderDetailActions"></div>
+    <div class="bluetooth-tip" id="bluetoothTip" style="margin-top:10px;">
+      ⚠️ 微信浏览器不支持蓝牙打印。<br>请用 <b>Chrome浏览器</b> 打开，然后点击「🖨️ 蓝牙打印」。
+    </div>
+  </div>
+</div>
+
+<!-- ====== 货品编辑弹窗 ====== -->
+<div class="modal-overlay" id="goodsModal">
+  <div class="modal">
+    <div class="modal-title" id="goodsModalTitle">新增货品</div>
+    <div class="form-row">
+      <label>货品名称 *</label>
+      <input type="text" id="goodsNameInput" placeholder="如：辣椒面">
+    </div>
+    <div class="form-row">
+      <label>分类</label>
+      <select id="goodsCatInput">
+        <option value="耗材/工具">耗材/工具</option>
+        <option value="调料/腌料">调料/腌料</option>
+        <option value="牛羊肉串类">牛羊肉串类</option>
+        <option value="海鲜/鱼类">海鲜/鱼类</option>
+        <option value="玉米/鸡/翅类">玉米/鸡/翅类</option>
+        <option value="鸡/内脏/特色">鸡/内脏/特色</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>单位</label>
+      <select id="goodsUnitInput">
+        <option value="包">包</option>
+        <option value="斤">斤</option>
+        <option value="箱">箱</option>
+        <option value="袋">袋</option>
+        <option value="瓶">瓶</option>
+        <option value="个">个</option>
+        <option value="件">件</option>
+        <option value="公斤">公斤</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>基础单价（元/单位）*</label>
+      <input type="number" id="goodsPriceInput" placeholder="如：25" min="0" step="0.01">
+    </div>
+    <div class="form-row">
+      <label>阶梯价格（可选）</label>
+      <div style="font-size:11px;color:#999;margin-bottom:4px;">买满一定数量后单价自动变化</div>
+      <div id="tierList"></div>
+      <button class="btn btn-sm btn-outline" onclick="addTierRow()" style="margin-top:4px;">+ 添加阶梯</button>
+    </div>
+    <div class="form-row">
+      <label>Emoji图标</label>
+      <input type="text" id="goodsEmojiInput" placeholder="如：🌶️" maxlength="4">
+    </div>
+    <input type="hidden" id="goodsEditId" value="">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="hideModal('goodsModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveGoods()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 客户编辑弹窗 ====== -->
+<div class="modal-overlay" id="customerModal">
+  <div class="modal">
+    <div class="modal-title" id="customerModalTitle">新增客户</div>
+    <div class="form-row">
+      <label>客户名称 *</label>
+      <input type="text" id="customerNameInput" placeholder="如：张老板">
+    </div>
+    <div class="form-row">
+      <label>折扣（%）</label>
+      <input type="number" id="customerDiscountInput" placeholder="100=不打折，90=9折" min="1" max="100" value="100">
+      <div style="font-size:11px;color:#999;margin-top:2px;">100=原价，90=9折，85=85折</div>
+    </div>
+    <div class="form-row">
+      <label>联系电话</label>
+      <input type="tel" id="customerPhoneInput" placeholder="选填">
+    </div>
+    <div class="form-row">
+      <label>地址</label>
+      <input type="text" id="customerAddrInput" placeholder="选填">
+    </div>
+    <input type="hidden" id="customerEditId" value="">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="hideModal('customerModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 数据层 ==========
+let DB = { goods:[], customers:[], orders:[], cart:{} };
+let currentRole = 'client'; // 'client' | 'admin'
+let currentAdminTab = 'orders';
+let currentCat = '全部';
+let currentPrintOrder = null;
+
+function loadDB() {
+  try { const d=localStorage.getItem('bbq_db'); if(d) DB=JSON.parse(d); } catch(e) {}
+}
+function saveDB() { localStorage.setItem('bbq_db', JSON.stringify(DB)); }
+
+// ========== 初始化76种真实商品 ==========
+function initDemoData() {
+  if(DB.goods.length>0) return;
+  DB.goods = [
+    // 耗材/工具
+    {id:'g1',name:'木炭',cat:'耗材/工具',unit:'箱',basePrice:0,tiers:[],emoji:'🪵'},
+    {id:'g2',name:'钢签',cat:'耗材/工具',unit:'包',basePrice:0,tiers:[],emoji:'🥢'},
+    {id:'g3',name:'钢夹子',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'🔧'},
+    {id:'g4',name:'小盘子',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'🍽️'},
+    {id:'g5',name:'炭夹子',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'🔧'},
+    {id:'g6',name:'刷子',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'🖌️'},
+    {id:'g7',name:'花蛤盒子',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'📦'},
+    {id:'g8',name:'抽纸盒',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'📦'},
+    {id:'g9',name:'餐具精',cat:'耗材/工具',unit:'包',basePrice:0,tiers:[],emoji:'🧴'},
+    {id:'g10',name:'酒精纸',cat:'耗材/工具',unit:'包',basePrice:0,tiers:[],emoji:'🧻'},
+    {id:'g11',name:'锡纸盒',cat:'耗材/工具',unit:'个',basePrice:0,tiers:[],emoji:'📦'},
+    {id:'g12',name:'茶叶包',cat:'耗材/工具',unit:'包',basePrice:0,tiers:[],emoji:'🍵'},
+    // 调料/腌料
+    {id:'g13',name:'撒料',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🧂'},
+    {id:'g14',name:'芝麻盐',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🧂'},
+    {id:'g15',name:'花生碎',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🥜'},
+    {id:'g16',name:'孜然',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🌿'},
+    {id:'g17',name:'嫩肉粉',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🧂'},
+    {id:'g18',name:'辣椒面',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🌶️'},
+    {id:'g19',name:'辣椒酱',cat:'调料/腌料',unit:'瓶',basePrice:0,tiers:[],emoji:'🌶️'},
+    {id:'g20',name:'龙虾料',cat:'调料/腌料',unit:'包',basePrice:0,tiers:[],emoji:'🦞'},
+    {id:'g21',name:'钉螺料',cat:'调料/腌料',unit:'包',basePrice:0,tiers:[],emoji:'🐚'},
+    {id:'g22',name:'火山石烤肠',cat:'调料/腌料',unit:'包',basePrice:0,tiers:[],emoji:'🌭'},
+    {id:'g23',name:'脆骨肠',cat:'调料/腌料',unit:'包',basePrice:0,tiers:[],emoji:'🌭'},
+    {id:'g24',name:'秋刀鱼',cat:'调料/腌料',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g25',name:'牛巴肉串',cat:'调料/腌料',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    // 牛羊肉串类
+    {id:'g26',name:'牛肉串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g27',name:'羊肉串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🍖'},
+    {id:'g28',name:'板筋串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g29',name:'心管串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g30',name:'蒜瓣肉串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🧄'},
+    {id:'g31',name:'脆骨串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🦴'},
+    {id:'g32',name:'面筋串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🍢'},
+    {id:'g33',name:'鱿鱼串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🦑'},
+    {id:'g34',name:'鸭肠串',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🦆'},
+    {id:'g35',name:'望京小腰',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🥓'},
+    {id:'g36',name:'掌中宝',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🦴'},
+    {id:'g37',name:'活珠子',cat:'牛羊肉串类',unit:'个',basePrice:0,tiers:[],emoji:'🥚'},
+    {id:'g38',name:'小饼',cat:'牛羊肉串类',unit:'包',basePrice:0,tiers:[],emoji:'🫓'},
+    // 海鲜/鱼类
+    {id:'g39',name:'牛肉筋',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g40',name:'猪肉筋',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g41',name:'马步鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g42',name:'多味鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g43',name:'多春鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g44',name:'黄花鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐠'},
+    {id:'g45',name:'黄煎鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g46',name:'麦香鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🐟'},
+    {id:'g47',name:'鱿鱼',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🦑'},
+    {id:'g48',name:'鱼豆腐',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🧈'},
+    {id:'g49',name:'千页豆腐',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🧈'},
+    {id:'g50',name:'淄博小饼',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🫓'},
+    {id:'g51',name:'毛花毛',cat:'海鲜/鱼类',unit:'包',basePrice:0,tiers:[],emoji:'🌿'},
+    {id:'g52',name:'生豆',cat:'海鲜/鱼类',unit:'斤',basePrice:0,tiers:[],emoji:'🫘'},
+    // 玉米/鸡/翅类
+    {id:'g53',name:'玉米棒子',cat:'玉米/鸡/翅类',unit:'个',basePrice:0,tiers:[],emoji:'🌽'},
+    {id:'g54',name:'金蝉',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🦗'},
+    {id:'g55',name:'羊腰',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🐑'},
+    {id:'g56',name:'羊板心',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🐑'},
+    {id:'g57',name:'脆月牙骨',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🦴'},
+    {id:'g58',name:'骨肉相连',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🍗'},
+    {id:'g59',name:'鸡鸡翅',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🍗'},
+    {id:'g60',name:'鸡心胗头翅中',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🍗'},
+    {id:'g61',name:'宝筋管骨',cat:'玉米/鸡/翅类',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    // 鸡/内脏/特色
+    {id:'g62',name:'翅尖',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🍗'},
+    {id:'g63',name:'鸡肝',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🐔'},
+    {id:'g64',name:'鸡脖',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🐔'},
+    {id:'g65',name:'奥尔良翅中',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🍗'},
+    {id:'g66',name:'黑椒烤肉',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g67',name:'葱香肥牛',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🧅'},
+    {id:'g68',name:'蒜瓣肉',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🧄'},
+    {id:'g69',name:'培根',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🥓'},
+    {id:'g70',name:'烤肠',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🌭'},
+    {id:'g71',name:'亲亲肠',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🌭'},
+    {id:'g72',name:'甜不辣',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🍥'},
+    {id:'g73',name:'扇贝粉丝',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🦪'},
+    {id:'g74',name:'生蚝粉丝螺钉',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🦪'},
+    {id:'g75',name:'好油边',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🥩'},
+    {id:'g76',name:'鸡心',cat:'鸡/内脏/特色',unit:'包',basePrice:0,tiers:[],emoji:'🐔'}
+  ];
+  DB.customers = [
+    {id:'c1',name:'张老板',discount:100,phone:'13800001111',address:'烧烤街A区'},
+    {id:'c2',name:'李姐',discount:90,phone:'13900002222',address:''},
+    {id:'c3',name:'王经理',discount:85,phone:'',address:''},
+    {id:'c4',name:'陈师傅',discount:100,phone:'',address:''}
+  ];
+  saveDB();
+}
+
+// ========== Toast ==========
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+
+// ========== 弹窗 ==========
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// ========== 角色切换 ==========
+function switchRole() {
+  currentRole = currentRole==='client'?'admin':'client';
+  const clientPage=document.getElementById('clientPage');
+  const adminPage=document.getElementById('adminPage');
+  const badge=document.getElementById('roleBadge');
+  const adminLink=document.getElementById('adminLink');
+
+  if(currentRole==='admin') {
+    clientPage.style.display='none';
+    adminPage.style.display='block';
+    adminPage.classList.add('active');
+    badge.textContent='🔧 商家后台';
+    badge.style.background='rgba(255,255,255,0.3)';
+    adminLink.style.display='none';
+    switchAdminTab('orders');
+    renderAdminOrders();
+    if(isWeChat()) document.getElementById('bluetoothTip').classList.add('show');
+  } else {
+    clientPage.style.display='block';
+    adminPage.style.display='none';
+    adminPage.classList.remove('active');
+    badge.textContent='📱 我是客户';
+    badge.style.background='rgba(255,255,255,0.2)';
+    adminLink.style.display='none';
+    document.getElementById('bluetoothTip').classList.remove('show');
+  }
+}
+
+// ========== 客户端：分类侧边栏 ==========
+const ALL_CATS = ['全部','耗材/工具','调料/腌料','牛羊肉串类','海鲜/鱼类','玉米/鸡/翅类','鸡/内脏/特色'];
+
+function renderCatSidebar() {
+  const sidebar=document.getElementById('catSidebar');
+  sidebar.innerHTML = ALL_CATS.map(c=>
+    `<div class="cat-item${c===currentCat?' active':''}" onclick="selectCat('${c}')">${c}</div>`
+  ).join('');
+}
+
+function selectCat(cat) {
+  currentCat=cat;
+  document.getElementById('goodsSearchInput').value='';
+  renderCatSidebar();
+  renderGoods();
+}
+
+function filterGoods() {
+  const kw=document.getElementById('goodsSearchInput').value.trim();
+  if(kw) currentCat='全部';
+  renderCatSidebar();
+  renderGoods(kw);
+}
+
+function renderGoods(keyword) {
+  const area=document.getElementById('goodsArea');
+  let goods=DB.goods;
+  if(keyword) {
+    goods=goods.filter(g=>g.name.includes(keyword));
+  } else if(currentCat!=='全部') {
+    goods=goods.filter(g=>g.cat===currentCat);
+  }
+
+  if(goods.length===0) {
+    area.innerHTML='<div class="empty">😕 没找到商品</div>';
+    return;
+  }
+
+  area.innerHTML = goods.map(g=>{
+    const qty=DB.cart[g.id]||0;
+    const minusHidden=qty===0?'hidden':'';
+    return `<div class="goods-card">
+      <div class="goods-img">${g.emoji||'📦'}</div>
+      <div class="goods-info">
+        <div class="goods-name">${g.name}</div>
+        <div class="goods-desc">${g.cat} · /${g.unit}</div>
+      </div>
+      <div class="goods-action">
+        <div class="btn-minus ${minusHidden}" onclick="changeQty('${g.id}',-1)">−</div>
+        <div class="goods-qty">${qty||0}</div>
+        <div class="btn-plus" onclick="changeQty('${g.id}',1)">+</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeQty(gid, delta) {
+  const g=DB.goods.find(x=>x.id===gid);
+  if(!g) return;
+  if(!DB.cart[gid]) DB.cart[gid]=0;
+  DB.cart[gid]+=delta;
+  if(DB.cart[gid]<0) DB.cart[gid]=0;
+  renderGoods(document.getElementById('goodsSearchInput').value.trim()||null);
+  renderCartBar();
+}
+
+function renderCartBar() {
+  const badge=document.getElementById('cartBadge');
+  const icon=document.getElementById('cartIcon');
+  const empty=document.getElementById('cartEmpty');
+  const total=document.getElementById('cartTotal');
+  const submit=document.getElementById('cartSubmit');
+
+  let totalQty=0;
+  for(const k in DB.cart) totalQty+=DB.cart[k];
+
+  if(totalQty===0) {
+    icon.classList.add('empty');
+    badge.style.display='none';
+    empty.style.display='block';
+    total.style.display='none';
+    submit.disabled=true;
+  } else {
+    icon.classList.remove('empty');
+    badge.style.display='flex';
+    badge.textContent=totalQty;
+    empty.style.display='none';
+    total.style.display='block';
+    total.textContent='已选 '+totalQty+' 件';
+    submit.disabled=false;
+  }
+}
+
+function toggleCartDetail() {
+  if(Object.keys(DB.cart).length===0) return;
+  showSubmitModal();
+}
+
+// ========== 客户端：提交订单 ==========
+function showSubmitModal() {
+  const itemList=document.getElementById('submitItemList');
+  let items=[];
+  let totalQty=0;
+  for(const gid in DB.cart) {
+    if(DB.cart[gid]<=0) continue;
+    const g=DB.goods.find(x=>x.id===gid);
+    if(!g) continue;
+    items.push({goods:g,qty:DB.cart[gid]});
+    totalQty+=DB.cart[gid];
+  }
+  if(items.length===0) { showToast('请先选择商品'); return; }
+
+  itemList.innerHTML = items.map(item=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee;">
+      <span>${item.goods.emoji||''} ${item.goods.name} <span style="color:#999;font-size:12px;">×${item.qty}${item.goods.unit}</span></span>
+    </div>`
+  ).join('');
+
+  // 自动填上次提交的名字
+  const lastOrder=DB.orders[DB.orders.length-1];
+  if(lastOrder&&!document.getElementById('submitName').value) {
+    document.getElementById('submitName').value=lastOrder.customerName||'';
+    document.getElementById('submitPhone').value=lastOrder.phone||'';
+  }
+
+  showModal('submitModal');
+}
+
+function submitOrder() {
+  const name=document.getElementById('submitName').value.trim();
+  const phone=document.getElementById('submitPhone').value.trim();
+  const remark=document.getElementById('submitRemark').value.trim();
+
+  if(!name) { showToast('请填写您的称呼'); return; }
+
+  // 检查是否已存在该客户，不存在则自动创建
+  let customer=DB.customers.find(c=>c.name===name);
+  if(!customer) {
+    customer={id:'c'+Date.now(),name,discount:100,phone,address:''};
+    DB.customers.push(customer);
+  }
+
+  const items=[];
+  for(const gid in DB.cart) {
+    if(DB.cart[gid]<=0) continue;
+    const g=DB.goods.find(x=>x.id===gid);
+    if(!g) continue;
+    let price=g.basePrice;
+    for(let t of (g.tiers||[])) { if(DB.cart[gid]>=t.minQty) price=t.price; }
+    items.push({
+      goodsId:g.id,
+      name:g.name,
+      qty:DB.cart[gid],
+      unit:g.unit,
+      price,
+      total:+(DB.cart[gid]*price).toFixed(2)
+    });
+  }
+
+  const total=items.reduce((s,i)=>s+i.total,0);
+  let discountTotal=total;
+  if(customer.discount<100) discountTotal=+(total*customer.discount/100).toFixed(2);
+
+  const order={
+    id:'o'+Date.now(),
+    customerId:customer.id,
+    customerName:name,
+    phone,
+    remark,
+    items,
+    total,
+    discountTotal,
+    status:'pending',
+    time:new Date().toLocaleString('zh-CN')
+  };
+
+  DB.orders.push(order);
+  saveDB();
+
+  // 清空购物车
+  DB.cart={};
+  renderCartBar();
+  renderGoods();
+
+  hideModal('submitModal');
+  document.getElementById('submitName').value='';
+  document.getElementById('submitPhone').value='';
+  document.getElementById('submitRemark').value='';
+
+  showToast('✅ 订单已提交！商家会尽快确认');
+}
+
+// ========== 商家端 ==========
+function switchAdminTab(tab, btn) {
+  currentAdminTab=tab;
+  const tabs={orders:'adminOrders',tally:'adminTally',goods:'adminGoods',customers:'adminCustomers'};
+  const btns={orders:'tabOrders',tally:'tabTally',goods:'tabGoodsMgmt',customers:'tabCustomersMgmt'};
+
+  for(const k in tabs) {
+    document.getElementById(tabs[k]).style.display=k===tab?'block':'none';
+    document.getElementById(btns[k]).className=k===tab?'btn btn-primary':'btn btn-outline';
+  }
+
+  if(tab==='orders') renderAdminOrders();
+  if(tab==='tally') renderAdminTally();
+  if(tab==='goods') renderAdminGoods();
+  if(tab==='customers') renderAdminCustomers();
+}
+
+function renderAdminOrders() {
+  const filter=document.getElementById('orderFilter').value;
+  const list=document.getElementById('adminOrderList');
+  let orders=DB.orders.slice().reverse();
+  if(filter!=='all') orders=orders.filter(o=>o.status===filter);
+
+  if(orders.length===0) {
+    list.innerHTML='<div class="empty">📭 暂无订单</div>';
+    return;
+  }
+
+  list.innerHTML=orders.map(o=>{
+    const statusMap={pending:'待确认',confirmed:'已确认',done:'已完成'};
+    const itemsStr=o.items.map(i=>i.name+'×'+i.qty).join('、');
+    let actions='';
+    if(o.status==='pending') {
+      actions=`<div class="order-actions">
+        <button class="btn-confirm" onclick="confirmOrder('${o.id}')">确认</button>
+        <button class="btn-delete" onclick="deleteOrder('${o.id}')">删除</button>
+      </div>`;
+    } else if(o.status==='confirmed') {
+      actions=`<div class="order-actions">
+        <button class="btn-print" onclick="viewAndPrintOrder('${o.id}')">🖨️ 打印</button>
+        <button class="btn-done" onclick="markDone('${o.id}')">完成</button>
+      </div>`;
+    }
+    return `<div class="order-card">
+      <div class="order-header">
+        <div class="order-customer">${o.customerName}</div>
+        <div class="order-status ${o.status}">${statusMap[o.status]}</div>
+      </div>
+      <div class="order-items">${itemsStr}</div>
+      <div class="order-time">${o.time} · ¥${o.discountTotal.toFixed(2)}</div>
+      ${o.remark?`<div style="font-size:12px;color:#e85d3a;margin-top:4px;">📝 ${o.remark}</div>`:''}
+      ${actions}
+    </div>`;
+  }).join('');
+}
+
+function confirmOrder(oid) {
+  const o=DB.orders.find(x=>x.id===oid);
+  if(!o) return;
+
+  // 匹配已有客户或创建新客户
+  let c=DB.customers.find(x=>x.name===o.customerName);
+  if(!c) {
+    c={id:'c'+Date.now(),name:o.customerName,discount:100,phone:o.phone||'',address:''};
+    DB.customers.push(c);
+    o.customerId=c.id;
+  }
+
+  // 重算价格（用客户折扣）
+  const total=o.items.reduce((s,i)=>s+i.total,0);
+  o.total=total;
+  o.discountTotal=c.discount<100?+(total*c.discount/100).toFixed(2):total;
+  o.status='confirmed';
+  saveDB();
+  renderAdminOrders();
+  showToast('✅ 已确认，可打印账单');
+}
+
+function markDone(oid) {
+  const o=DB.orders.find(x=>x.id===oid);
+  if(!o) return;
+  o.status='done';
+  saveDB();
+  renderAdminOrders();
+  showToast('✅ 已完成');
+}
+
+function deleteOrder(oid) {
+  if(!confirm('确定删除该订单？')) return;
+  DB.orders=DB.orders.filter(o=>o.id!==oid);
+  saveDB();
+  renderAdminOrders();
+  showToast('已删除');
+}
+
+function viewAndPrintOrder(oid) {
+  const o=DB.orders.find(x=>x.id===oid);
+  if(!o) return;
+  currentPrintOrder=o;
+  renderOrderDetail(o);
+  showModal('orderDetailModal');
+}
+
+function renderOrderDetail(o) {
+  const c=DB.customers.find(x=>x.id===o.customerId)||{};
+  let itemsHtml=o.items.map(i=>
+    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0;">
+      <span>${i.name} ×${i.qty}${i.unit}</span>
+      <span>¥${i.total.toFixed(2)}</span>
+    </div>`
+  ).join('');
+
+  let discHtml='';
+  if(o.discountTotal!==o.total) {
+    discHtml=`<div style="display:flex;justify-content:space-between;padding:6px 0;color:#e85d3a;font-size:13px;">
+      <span>${o.customerName} ${(c.discount/10).toFixed(1)}折</span>
+      <span>-¥${(o.total-o.discountTotal).toFixed(2)}</span>
+    </div>`;
+  }
+
+  document.getElementById('orderDetailTitle').textContent=o.customerName+' · 订单详情';
+  document.getElementById('orderDetailContent').innerHTML=
+    `<div style="font-size:12px;color:#999;margin-bottom:8px;">${o.time} · ${o.status==='pending'?'待确认':o.status==='confirmed'?'已确认':'已完成'}</div>`+
+    `<div style="background:#f8f8f8;border-radius:8px;padding:12px;margin-bottom:8px;">${itemsHtml}${discHtml}
+      <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #333;margin-top:8px;font-size:16px;font-weight:bold;">
+        <span>合计</span><span style="color:#e85d3a;">¥${o.discountTotal.toFixed(2)}</span>
+      </div>
+    </div>`+
+    (o.remark?`<div style="font-size:13px;color:#e85d3a;">📝 ${o.remark}</div>`:'')+
+    (o.phone?`<div style="font-size:13px;color:#666;">📞 ${o.phone}</div>`:'');
+
+  document.getElementById('orderDetailActions').innerHTML=
+    `<button class="btn btn-outline" style="flex:1;" onclick="hideModal('orderDetailModal')">关闭</button>`+
+    `<button class="btn" style="flex:1;background:#2196f3;color:#fff;" onclick="printCurrentOrder()">🖨️ 蓝牙打印</button>`;
+}
+
+// ========== 商家端：对账 ==========
+function renderAdminTally() {
+  const filter=document.getElementById('tallyFilter').value;
+  const list=document.getElementById('adminTallyList');
+  const map={};
+
+  DB.orders.forEach(o=>{
+    if(filter==='unpaid'&&o.status==='done') return;
+    if(filter==='today') {
+      const oDate=new Date(o.time).toLocaleDateString('zh-CN');
+      const today=new Date().toLocaleDateString('zh-CN');
+      if(oDate!==today) return;
+    }
+    if(!map[o.customerId]) map[o.customerId]={name:o.customerName,orders:[],total:0};
+    map[o.customerId].orders.push(o);
+    map[o.customerId].total+=o.discountTotal;
+  });
+
+  const keys=Object.keys(map);
+  if(keys.length===0) { list.innerHTML='<div class="empty">暂无数据</div>'; return; }
+
+  list.innerHTML=keys.map(cid=>{
+    const data=map[cid];
+    const doneCount=data.orders.filter(o=>o.status==='done').length;
+    const unpaid=data.orders.filter(o=>o.status!=='done');
+    const unpaidTotal=unpaid.reduce((s,o)=>s+o.discountTotal,0);
+    return `<div class="tally-card">
+      <div class="tally-header">
+        <div class="tally-customer">${data.name}</div>
+        <div class="tally-total">¥${data.total.toFixed(2)}</div>
+      </div>
+      <div class="tally-summary">共${data.orders.length}笔 · 未完成${unpaid.length}笔</div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-sm btn-outline" onclick="toggleTallyDetail('${cid}')">查看明细</button>
+        <button class="btn btn-sm btn-primary" onclick="markCustomerDone('${cid}')">全部完成</button>
+      </div>
+      <div class="tally-detail" id="tally-detail-${cid}">
+        ${data.orders.map(o=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f5f5f5;">
+          <span style="font-size:12px;color:#666;">${o.time.substring(0,10)} ${o.status==='done'?'✅':''}</span>
+          <span style="font-size:12px;font-weight:600;color:${o.status==='done'?'#999':'#e85d3a'};">¥${o.discountTotal.toFixed(2)}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTallyDetail(cid) {
+  document.getElementById('tally-detail-'+cid).classList.toggle('open');
+}
+
+function markCustomerDone(cid) {
+  if(!confirm('将该客户所有订单标记为已完成？')) return;
+  DB.orders.forEach(o=>{ if(o.customerId===cid) o.status='done'; });
+  saveDB();
+  renderAdminTally();
+  showToast('已全部完成');
+}
+
+// ========== 商家端：货品管理 ==========
+function renderAdminGoods() {
+  const kw=(document.getElementById('adminGoodsSearch')||{}).value||'';
+  const list=document.getElementById('adminGoodsList');
+  let goods=DB.goods;
+  if(kw) goods=goods.filter(g=>g.name.includes(kw));
+
+  if(goods.length===0) { list.innerHTML='<div class="empty">暂无货品</div>'; return; }
+
+  list.innerHTML=goods.map(g=>{
+    let tierStr='';
+    if((g.tiers||[]).length>0) tierStr='<div style="font-size:11px;color:#e85d3a;margin-top:2px;">阶梯：'+g.tiers.map(t=>'满'+t.minQty+g.unit+' ¥'+t.price).join(' / ')+'</div>';
+    return `<div class="goods-mgmt-card">
+      <div class="goods-mgmt-info">
+        <div class="goods-mgmt-name">${g.emoji||''} ${g.name} <span style="font-size:11px;color:#999;">/${g.unit}</span></div>
+        <div class="goods-mgmt-price">¥${g.basePrice}/${g.unit} · ${g.cat}${tierStr}</div>
+      </div>
+      <div class="goods-mgmt-actions">
+        <button class="btn btn-sm btn-outline" onclick="editGoods('${g.id}')">编辑</button>
+        <button class="btn btn-sm" style="background:#ff4d4f;color:#fff;" onclick="deleteGoods('${g.id}')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showGoodsModal(gid) {
+  document.getElementById('goodsEditId').value='';
+  document.getElementById('goodsModalTitle').textContent='新增货品';
+  document.getElementById('goodsNameInput').value='';
+  document.getElementById('goodsCatInput').value='耗材/工具';
+  document.getElementById('goodsUnitInput').value='包';
+  document.getElementById('goodsPriceInput').value='';
+  document.getElementById('goodsEmojiInput').value='';
+  document.getElementById('tierList').innerHTML='';
+
+  if(gid) {
+    const g=DB.goods.find(x=>x.id===gid);
+    if(g) {
+      document.getElementById('goodsEditId').value=g.id;
+      document.getElementById('goodsModalTitle').textContent='编辑货品';
+      document.getElementById('goodsNameInput').value=g.name;
+      document.getElementById('goodsCatInput').value=g.cat;
+      document.getElementById('goodsUnitInput').value=g.unit;
+      document.getElementById('goodsPriceInput').value=g.basePrice;
+      document.getElementById('goodsEmojiInput').value=g.emoji||'';
+      (g.tiers||[]).forEach(t=>addTierRow(t.minQty,t.price));
+    }
+  }
+  showModal('goodsModal');
+}
+
+function addTierRow(minQty,price) {
+  const id=Date.now();
+  const unit=document.getElementById('goodsUnitInput').value;
+  const html=`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;" id="tier-${id}">
+    <span style="font-size:12px;">满</span>
+    <input type="number" placeholder="数量" value="${minQty||''}" class="tier-qty" min="0" step="0.1" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+    <span style="font-size:12px;">${unit}以上</span>
+    <input type="number" placeholder="单价" value="${price||''}" class="tier-price" min="0" step="0.01" style="width:70px;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:13px;">
+    <span style="font-size:12px;">元</span>
+    <button class="btn btn-sm" style="background:#ff4d4f;color:#fff;padding:2px 6px;" onclick="document.getElementById('tier-${id}').remove()">×</button>
+  </div>`;
+  document.getElementById('tierList').insertAdjacentHTML('beforeend',html);
+}
+
+function saveGoods() {
+  const name=document.getElementById('goodsNameInput').value.trim();
+  const cat=document.getElementById('goodsCatInput').value;
+  const unit=document.getElementById('goodsUnitInput').value;
+  const basePrice=parseFloat(document.getElementById('goodsPriceInput').value);
+  const emoji=document.getElementById('goodsEmojiInput').value.trim();
+  const editId=document.getElementById('goodsEditId').value;
+
+  if(!name||isNaN(basePrice)) { showToast('请填写名称和单价'); return; }
+
+  const tiers=[];
+  document.querySelectorAll('#tierList > div').forEach(row=>{
+    const q=parseFloat(row.querySelector('.tier-qty').value);
+    const p=parseFloat(row.querySelector('.tier-price').value);
+    if(q&&p) tiers.push({minQty:q,price:p});
+  });
+  tiers.sort((a,b)=>a.minQty-b.minQty);
+
+  if(editId) {
+    const g=DB.goods.find(x=>x.id===editId);
+    if(g) { g.name=name; g.cat=cat; g.unit=unit; g.basePrice=basePrice; g.tiers=tiers; g.emoji=emoji; }
+  } else {
+    DB.goods.push({id:'g'+Date.now(),name,cat,unit,basePrice,tiers,emoji});
+  }
+
+  saveDB();
+  hideModal('goodsModal');
+  renderAdminGoods();
+  renderCatSidebar();
+  renderGoods();
+  showToast('保存成功');
+}
+
+function editGoods(gid) { showGoodsModal(gid); }
+
+function deleteGoods(gid) {
+  if(!confirm('确定删除该货品？')) return;
+  DB.goods=DB.goods.filter(g=>g.id!==gid);
+  saveDB();
+  renderAdminGoods();
+  renderCatSidebar();
+  renderGoods();
+  showToast('已删除');
+}
+
+// ========== 商家端：客户管理 ==========
+function renderAdminCustomers() {
+  const list=document.getElementById('adminCustomerList');
+  if(DB.customers.length===0) { list.innerHTML='<div class="empty">暂无客户</div>'; return; }
+
+  list.innerHTML=DB.customers.map(c=>{
+    const discStr=c.discount<100?`<span class="tag">${(c.discount/10).toFixed(1)}折</span>`:'';
+    return `<div class="customer-card">
+      <div class="customer-info">
+        <div class="customer-name">${c.name} ${discStr}</div>
+        <div class="customer-meta">${c.phone||''} ${c.address||''}</div>
+      </div>
+      <div class="goods-mgmt-actions">
+        <button class="btn btn-sm btn-outline" onclick="editCustomer('${c.id}')">编辑</button>
+        <button class="btn btn-sm" style="background:#ff4d4f;color:#fff;" onclick="deleteCustomer('${c.id}')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showCustomerModal(cid) {
+  document.getElementById('customerEditId').value='';
+  document.getElementById('customerModalTitle').textContent='新增客户';
+  document.getElementById('customerNameInput').value='';
+  document.getElementById('customerDiscountInput').value=100;
+  document.getElementById('customerPhoneInput').value='';
+  document.getElementById('customerAddrInput').value='';
+
+  if(cid) {
+    const c=DB.customers.find(x=>x.id===cid);
+    if(c) {
+      document.getElementById('customerEditId').value=c.id;
+      document.getElementById('customerModalTitle').textContent='编辑客户';
+      document.getElementById('customerNameInput').value=c.name;
+      document.getElementById('customerDiscountInput').value=c.discount;
+      document.getElementById('customerPhoneInput').value=c.phone||'';
+      document.getElementById('customerAddrInput').value=c.address||'';
+    }
+  }
+  showModal('customerModal');
+}
+
+function saveCustomer() {
+  const name=document.getElementById('customerNameInput').value.trim();
+  const discount=parseInt(document.getElementById('customerDiscountInput').value)||100;
+  const phone=document.getElementById('customerPhoneInput').value.trim();
+  const address=document.getElementById('customerAddrInput').value.trim();
+  const editId=document.getElementById('customerEditId').value;
+
+  if(!name) { showToast('请填写客户名称'); return; }
+
+  if(editId) {
+    const c=DB.customers.find(x=>x.id===editId);
+    if(c) { c.name=name; c.discount=discount; c.phone=phone; c.address=address; }
+  } else {
+    DB.customers.push({id:'c'+Date.now(),name,discount,phone,address});
+  }
+  saveDB();
+  hideModal('customerModal');
+  renderAdminCustomers();
+  showToast('保存成功');
+}
+
+function editCustomer(cid) { showCustomerModal(cid); }
+
+function deleteCustomer(cid) {
+  if(!confirm('确定删除该客户？')) return;
+  DB.customers=DB.customers.filter(c=>c.id!==cid);
+  saveDB();
+  renderAdminCustomers();
+  showToast('已删除');
+}
+
+// ========== 蓝牙打印 ==========
+let bleDevice=null, bleChar=null;
+
+function isWeChat() { return /MicroMessenger/i.test(navigator.userAgent); }
+
+async function connectPrinter() {
+  if(isWeChat()) { showToast('请用Chrome浏览器打开此链接进行蓝牙打印'); return false; }
+  if(!navigator.bluetooth) { showToast('浏览器不支持蓝牙，请用Chrome打开'); return false; }
+  if(bleDevice&&bleDevice.gatt&&bleDevice.gatt.connected) return true;
+
+  try {
+    showToast('正在搜索蓝牙打印机...');
+    bleDevice=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true,
+      optionalServices:['000018f0-0000-1000-8000-00805f9b34fb','0000ff00-0000-1000-8000-00805f9b34fb']
+    });
+
+    showToast('正在连接...');
+    const server=await bleDevice.gatt.connect();
+    let service=null, char=null;
+
+    try { service=await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb'); } catch(e) {}
+    if(!service) { try { service=await server.getPrimaryService('0000ff00-0000-1000-8000-00805f9b34fb'); } catch(e) {} }
+    if(!service) {
+      const services=await server.getPrimaryServices();
+      if(services.length>0) service=services[0];
+    }
+    if(!service) { showToast('未找到打印机服务'); return false; }
+
+    try { char=await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb'); } catch(e) {}
+    if(!char) { try { char=await service.getCharacteristic('00002af0-0000-1000-8000-00805f9b34fb'); } catch(e) {} }
+    if(!char) {
+      const chars=await service.getCharacteristics();
+      for(const c of chars) { if(c.properties.write||c.properties.writeWithoutResponse) { char=c; break; } }
+    }
+    if(!char) { showToast('未找到打印特征值'); return false; }
+
+    bleChar=char;
+    showToast('✅ 打印机已连接');
+    return true;
+  } catch(e) {
+    console.error(e);
+    showToast('蓝牙连接失败，请确保打印机已开机且已配对（PIN码0000）');
+    return false;
+  }
+}
+
+function padRight(str,len) {
+  let slen=0;
+  for(let i=0;i<str.length;i++) slen+=/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(str[i])?2:1;
+  let pad=''; for(let i=slen;i<len;i++) pad+=' ';
+  return str+pad;
+}
+
+function buildEscPosBill(order) {
+  let cmd='';
+  cmd+='\x1B\x40';
+  cmd+='\x1B\x61\x01';
+  cmd+='\x1B\x21\x10';
+  cmd+='烧烤总汇·送货单\n';
+  cmd+='\x1B\x21\x00';
+  cmd+='--------------------------------\n';
+  cmd+='\x1B\x61\x00';
+  cmd+='客户：'+order.customerName+'\n';
+  cmd+='时间：'+order.time+'\n';
+  cmd+='--------------------------------\n';
+  cmd+=padRight('货品',18)+padRight('数量',7)+'金额\n';
+  cmd+='--------------------------------\n';
+
+  for(const item of order.items) {
+    cmd+=padRight(item.name,18)+padRight(item.qty+item.unit,7)+item.total.toFixed(2)+'\n';
+  }
+
+  cmd+='--------------------------------\n';
+  if(order.discountTotal!==order.total) {
+    cmd+='原价：'+order.total.toFixed(2)+'\n';
+    cmd+='折扣：-'+(order.total-order.discountTotal).toFixed(2)+'\n';
+  }
+  cmd+='\x1B\x21\x10';
+  cmd+='合计：¥'+order.discountTotal.toFixed(2)+'\n';
+  cmd+='\x1B\x21\x00';
+  cmd+='--------------------------------\n';
+  cmd+='\x1B\x61\x01';
+  cmd+='感谢惠顾！\n';
+  cmd+='\n\n\n\n';
+  cmd+='\x1D\x56\x41\x10';
+  return cmd;
+}
+
+async function sendToPrinter(cmd) {
+  if(!bleChar) { showToast('请先连接打印机'); return false; }
+  const encoder=new TextEncoder();
+  const data=encoder.encode(cmd);
+  const chunkSize=200;
+  for(let i=0;i<data.length;i+=chunkSize) {
+    const chunk=data.slice(i,Math.min(i+chunkSize,data.length));
+    try {
+      await bleChar.writeValueWithoutResponse(chunk);
+    } catch(e) {
+      try { await bleChar.writeValue(chunk); } catch(e2) { showToast('发送失败'); return false; }
+    }
+    await new Promise(r=>setTimeout(r,20));
+  }
+  return true;
+}
+
+async function printCurrentOrder() {
+  if(isWeChat()) { showToast('请用Chrome打开此链接进行蓝牙打印'); return; }
+  const order=currentPrintOrder;
+  if(!order) { showToast('没有可打印的账单'); return; }
+
+  showToast('正在连接打印机...');
+  const connected=await connectPrinter();
+  if(!connected) return;
+
+  showToast('打印中...');
+  const cmd=buildEscPosBill(order);
+  const ok=await sendToPrinter(cmd);
+  if(ok) showToast('✅ 打印完成！');
+}
+
+// ========== 初始化 ==========
+loadDB();
+initDemoData();
+renderCatSidebar();
+renderGoods();
+renderCartBar();
+</script>
+</body>
+</html>
